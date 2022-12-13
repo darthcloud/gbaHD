@@ -53,4 +53,3 @@ jobs:
           files: |
             bitstream/*.bit
             *.bin
-        if: steps.changes.outputs.bitstream == 'true'
