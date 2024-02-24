@@ -1,0 +1,34 @@
+name: blueretro
+on:
+  workflow_dispatch:
+
+jobs:
+  list-bitstream:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: set-matrix
+        run: echo "matrix=$(basename -a bitstream/*.bit | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+  spiffsgen:
+    needs: list-bitstream
+    runs-on: ubuntu-latest
+    strategy:
+        matrix:
+            bitstream: ${{ fromJson(needs.list-bitstream.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package bitstream
+        run: |
+          curl https://raw.githubusercontent.com/espressif/esp-idf/master/components/spiffs/spiffsgen.py -o ./spiffsgen.py
+          mkdir spiffs
+          cp bitstream/${{ matrix.bitstream}} spiffs/bitstream.bit
+          python spiffsgen.py 0xF0000 spiffs/ ${{ matrix.bitstream}}_blueretro.bin
+        shell: bash
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.bitstream}}_blueretro
+          path: ${{ matrix.bitstream}}_blueretro.bin
+          if-no-files-found: error
